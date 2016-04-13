@@ -5,13 +5,15 @@ import time
 # %load TwitterEval.py
 #!usr/bin/env python3
 
+def append_times(row, hashtag, times):
+    if hashtag in row['hashtags']:
+        times.append(row['created_at'])
+
 def get_hashtag_plot(hashtag, df):
     times = []
-    for i in range(df.hashtags.size):
-        if hashtag in df.hashtags[i]:
-            times.append([df.created_at[i]])
+    df.apply(lambda row: append_times (row, hashtag, times), axis=1)
     
-    dates = [t for sublist in times for t in sublist]
+    dates = times
     
     ones = [1] * len(dates)
     idx = pd.DatetimeIndex(dates)
@@ -23,10 +25,10 @@ def get_hashtag_plot(hashtag, df):
 #change this later to get_hashtag_plot("digifest16")
 #after cleaning hashtags with ignore case
 def get_totalTweets_plot(df):
-	times = []
-	for time_tweeted in df.created_at:
-		times.append([time_tweeted])
-	dates = [t for sublist in times for t in sublist]
+    times = []
+    for time_tweeted in df.created_at:
+        times.append([time_tweeted])
+    dates = [t for sublist in times for t in sublist]
 
     ones = [1] * len(dates)
     idx = pd.DatetimeIndex(dates)
