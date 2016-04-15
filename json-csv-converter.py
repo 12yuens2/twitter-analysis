@@ -5,16 +5,19 @@ import json
 import pandas as pd
 from datetime import datetime
 import numpy as np
+import re
 
 def get_nullable(line, field):
+    """Extracts the value of a field or returns NaN is the field is empty"""
 
-    #nullables to NaN if null, for same format as TAG
     val = np.nan
     if line[field] is not None:
             val = line[field]
             return val
 
 def make_status_url(line):
+    """Generates status url from line with tweet data"""
+
     return ('http://twitter.com/' 
            + line['user']['screen_name'] 
            + '/statuses/' 
@@ -22,6 +25,8 @@ def make_status_url(line):
            )
 
 def get_coord(line):
+    """Finds and returns formatted coordinates in tweet data or NaN if none"""
+    
     coord = np.nan
     if line['coordinates'] is not None:
         coord = ("loc: " 
@@ -29,15 +34,19 @@ def get_coord(line):
                 + ',' 
                 + str(line['coordinates']['coordinates'][1])
                 )
-        return coord
+    return coord
 
 def get_time(line):
+    """Gets human readable time from utc time"""
+
     dt_time = datetime.strptime(line['created_at'],'%a %b %d %H:%M:%S %z %Y' )
     return dt_time.strftime('%d/%m/%Y %H:%M:%S')
 
 def generate_table(file_name, result_name):
+    """Creates table from twitter data in file_data and writes table as csv to result file"""
+
+    # Open specified file and create empty table with fields for twitter data
     json_file = open(file_name, 'r')
-    invalid_tweets = 0
     df = pd.DataFrame(columns = ['id_str', 
                                  'from_user', 
                                  'text', 
@@ -57,10 +66,16 @@ def generate_table(file_name, result_name):
                                  'entities_str'
                                 ])
 
+    # Invalid_tweets counts number of skipped tweets so index can stay continuous
+    invalid_tweets = 0
+
+    # Loop through file and fill table at each line
     for index, line in enumerate(json_file):
+
         json_line = json.loads(line)
             
-        # Check id_str in line to avoid lines representing deleted tweets
+        # Check id_str is present in line to avoid lines representing deleted 
+        # tweets or other lines that aren't tweets
         if 'id_str' in json_line:
                         
             df.loc[index - invalid_tweets] = [json_line['id_str'], 
@@ -79,19 +94,23 @@ def generate_table(file_name, result_name):
                                               json_line['user']['followers_count'], 
                                               json_line['user']['friends_count'],
                                               make_status_url(json_line),
-                                              json_line['entities']
+                                              json.dumps(json_line['entities'])
                                              ]
         else:
             invalid_tweets = invalid_tweets + 1
 
-    df.to_csv(result_name + '.csv', index = False)
+    # Write table to specified result file as csv
+    df.to_csv(result_name, index = False)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3: # check number of arguments
+
+    # Print error and exit if incorrect arguments
+    if len(sys.argv) != 3:
         print("usage ./json-csv-converter.py <json twitter filename> <name of results file to create>")
-        sys.exit(0) # exit with return value of 0
+        sys.exit(0)
     
+    # Generate table from file and catch any errors
     try:
         generate_table(sys.argv[1], sys.argv[2])
     except FileNotFoundError:
